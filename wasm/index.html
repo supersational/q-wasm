@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-time Pitch Detector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./build/pitch_detector_wasm.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    
+    <!-- <script src="https://unpkg.com/@stanko/dual-range-input@0.9.10/dist/index.js" type="module"></script> -->
+    <link rel="stylesheet" href="https://unpkg.com/@stanko/dual-range-input@0.9.10/dist/index.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .toggle-container {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        .toggle-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .toggle-btn.active {
+            background: #3498db;
+            color: white;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .stat-box {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 200px;
+        }
+        .inactive {
+            color: #999;
+            font-style: italic;
+        }
+        #note {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        #cents {
+            font-size: 14px;
+            color: #666;
+        }
+        .plot-container {
+            width: 100%;
+            margin-bottom: 2rem;
+        }
+        #pitchPlot, #waveformPlot, #spectrumPlot {
+            width: 100%;
+            height: 300px;
+        }
+        .range-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        .range-control {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 150px;
+        }
+        .range-control label {
+            font-size: 14px;
+            color: #666;
+        }
+        .range-control input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .dual-range-container {
+            width: 100%;
+            margin: 1rem 0;
+        }
+        .frequency-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        .frequency-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .frequency-value {
+            font-weight: bold;
+            color: #3498db;
+            margin-top: 0.25rem;
+        }
+        .dual-range-input {
+            width: 100%;
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .stats {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .stat-box {
+                min-width: unset;
+            }
+            #pitchPlot, #waveformPlot, #spectrumPlot {
+                height: 200px;
+            }
+        }
+        @media (max-width: 600px) {
+            .range-control {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Real-time Pitch Detector</h1>
+        
+        <div class="range-controls">
+            <!-- <div class="range-control">
+                <input type="number" id="minFreq" value="20" min="20" max="1000" step="10">
+            </div>
+            <div class="range-control">
+                <input type="number" id="maxFreq" value="10000" min="1000" max="20000" step="100">
+            </div> -->
+            <div class="dual-range-container">
+                <div class="frequency-labels">
+                    <div class="frequency-label">
+                        <label for="minFreq">Min Frequency (Hz)</label>
+                        <span class="frequency-value" id="minFreqValue">25</span>
+                    </div>
+                    <div class="frequency-label">
+                        <label for="maxFreq">Max Frequency (Hz)</label>
+                        <span class="frequency-value" id="maxFreqValue">5000</span>
+                    </div>
+                </div>
+                <div class="dual-range-input">
+                    <input type="range" min="1" max="4" step="0.001" value="1.398" id="minFreq" />
+                    <input type="range" min="1" max="4" step="0.001" value="3.699" id="maxFreq" />
+                </div>
+            </div>
+        </div>
+
+        <div id="controls">
+            <button id="startButton">Start Microphone</button>
+        </div>
+
+        <div class="toggle-container">
+            <button id="fftToggle" class="toggle-btn">Show FFT</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div id="frequency" class="inactive">Frequency: -- Hz</div>
+                <div id="note" class="inactive">Note: --</div>
+                <div id="cents" class="inactive">Cents: --</div>
+            </div>
+            <div class="stat-box">
+                <div id="periodicity">Periodicity: --</div>
+            </div>
+        </div>
+
+        <div class="plot-container">
+            <div id="pitchPlot"></div>
+        </div>
+
+        <div class="plot-container">
+            <div id="spectrumPlot" style="display: none;"></div>
+        </div>
+
+        <div class="plot-container">
+            <div id="waveformPlot"></div>
+        </div>
+    </div>
+    <script src="pitch_detector.js" type="module"></script>
+</body>
+</html>
