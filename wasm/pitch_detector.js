@@ -17,7 +17,7 @@ const MIN_FREQUENCY = 20;
 const MAX_FREQUENCY = 10000;
 const ONSET_PERIODICITY = 0.95
 const MIN_PERIODICITY = 0.9
-const HYSTERESIS_DB = -60.0  // Default hysteresis in decibels (did not work adding this as a parameter)
+const HYSTERESIS_DB = -60.0  // Default hysteresis in decibels
 // Plot configuration
 const maxDataPoints = 150;
 const timeData = Array(maxDataPoints).fill(0).map((_, i) => i);
@@ -30,7 +30,7 @@ const frequencyData = new Float32Array(frequencyBinCount);
 // Initialize plots
 function initPlots() {
     console.log("Initializing plots...");
-
+    
     // Pitch Plot
     const pitchTrace = {
         x: timeData,
@@ -117,18 +117,11 @@ function initPlots() {
     Plotly.newPlot('spectrumPlot', [spectrumTrace], spectrumLayout, config);
 
 
-    // Set up frequency range value display with logarithmic conversion
-    function updateFrequencyDisplay(inputId, displayId) {
-        const input = document.getElementById(inputId);
-        const display = document.getElementById(displayId);
-        const hzValue = logToHz(input.value);
-        display.textContent = Math.round(hzValue);
-    }
 
     function updateFrequencyRange() {
         const minFreq = parseFloat(minFreqInput.value);
         const maxFreq = parseFloat(maxFreqInput.value);
-
+        
         if (minFreq >= maxFreq) {
             return; // Invalid range
         }
@@ -136,20 +129,15 @@ function initPlots() {
         Plotly.relayout('pitchPlot', {
             'yaxis.range': [Math.log10(minFreq), Math.log10(maxFreq)]
         });
-
+        
         Plotly.relayout('spectrumPlot', {
             'xaxis.range': [Math.log10(minFreq), Math.log10(maxFreq)]
         });
-
-        updateFrequencyDisplay('minFreq', 'minFreqValue');
-        updateFrequencyDisplay('maxFreq', 'maxFreqValue');
-
-
     }
 
     minFreqInput.addEventListener('input', updateFrequencyRange);
     maxFreqInput.addEventListener('input', updateFrequencyRange);
-    updateFrequencyRange()
+
     // Raw Audio Waveform Plot
     const waveformTrace = {
         x: rawAudioTimeData,
@@ -186,16 +174,16 @@ function initPlots() {
 let fftEnabled = false;
 
 // Set up FFT toggle
-document.getElementById('fftToggle').addEventListener('click', function () {
+document.getElementById('fftToggle').addEventListener('click', function() {
     const spectrumPlot = document.getElementById('spectrumPlot');
     fftEnabled = !fftEnabled;
-
+    
     this.classList.toggle('active');
     this.textContent = fftEnabled ? 'Hide FFT' : 'Show FFT';
     spectrumPlot.style.display = fftEnabled ? 'block' : 'none';
 });
 
-Module.onRuntimeInitialized = function () {
+Module.onRuntimeInitialized = function() {
     console.log('WebAssembly module loaded');
 };
 
@@ -212,18 +200,18 @@ initPlots();
 
 function frequencyToNote(frequency) {
     if (!frequency) return { note: '--', cents: 0 };
-
+    
     // Calculate MIDI note number
     const noteNum = 12 * (Math.log2(frequency / A4_FREQ)) + A4_NOTE;
     const roundedNote = Math.round(noteNum);
-
+    
     // Calculate cents deviation
     const cents = Math.round((noteNum - roundedNote) * 100);
-
+    
     // Get note name and octave
     const noteName = NOTE_NAMES[roundedNote % 12];
     const octave = Math.floor(roundedNote / 12) - 1;
-
+    
     return {
         note: `${noteName}${octave}`,
         cents: cents
@@ -262,7 +250,7 @@ function updatePlots(frequency, rawAudioBuffer) {
         if (typeof lastValidPeriodicity === 'number') {
             periodDisplay.textContent = `Periodicity: ${lastValidPeriodicity.toFixed(3)}`;
         }
-
+        
         // Update note display
         const noteInfo = frequencyToNote(lastValidPitch);
         noteDisplay.textContent = `Note: ${noteInfo.note}`;
@@ -278,12 +266,12 @@ function updatePlots(frequency, rawAudioBuffer) {
     pitchData.shift();
     const newPitch = frequency > 0 ? frequency : null;
     pitchData.push(newPitch);
-
+    
     // console.log("Current pitch data array:", pitchData.slice(-5));  // Show last 5 values
     if (frequency > 0) {
         yTickText = [frequencyToNote(frequency).note]
         yTickVals = [frequency]
-        console.log({ yTickText, yTickVals })
+        // console.log({yTickText, yTickVals})
     }
     // Get frequency spectrum data
     analyser.getFloatFrequencyData(frequencyData);
@@ -300,11 +288,11 @@ function updatePlots(frequency, rawAudioBuffer) {
     // // Update pitch plot with new frequency data
     // if (frequency !== null) {
     //     lastValidPitch = frequency;
-
+        
     //     Plotly.extendTraces('pitchPlot', {
     //         y: [[frequency]]
     //     }, [0]);
-
+        
     //     // Remove old data points if we have too many
     //     if (currentIndex >= maxDataPoints) {
     //         Plotly.relayout('pitchPlot', {
@@ -335,14 +323,14 @@ async function initAudio() {
     try {
         // Create audio context
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+        
         // Add AudioWorklet module
         // await audioContext.audioWorklet.addModule('pitch_processor.js');
-
+        
         // Get microphone access
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micStream = stream;
-
+        
         // Create nodes for the audio graph
         const source = audioContext.createMediaStreamSource(stream);
         // const processor = new AudioWorkletNode(audioContext, 'pitch-processor', {
@@ -354,9 +342,9 @@ async function initAudio() {
         // });
         const processor = audioContext.createScriptProcessor(1024, 1, 1);
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 2048 / 8; // This gives us 1024 frequency bins
+        analyser.fftSize = 2048/8; // This gives us 1024 frequency bins
         analyser.smoothingTimeConstant = 0.8; // Smooth out the spectrum visualization
-
+        
         // Initialize pitch detector
         pitchDetector = new Module.PitchDetector(
             MIN_FREQUENCY,
@@ -366,21 +354,21 @@ async function initAudio() {
             ONSET_PERIODICITY,  // onset_periodicity
             MIN_PERIODICITY     // min_periodicity
         );
-
+        
         // Connect the audio graph
         source.connect(analyser);
         analyser.connect(processor);
         processor.connect(audioContext.destination);
         let lastFrequency = 0;
         // Process audio
-        processor.onaudioprocess = function (e) {
+        processor.onaudioprocess = function(e) {
             const input = e.inputBuffer.getChannelData(0);
             let frequency = 0;
-
+            
             // Get raw audio data for waveform
             const rawAudioData = new Float32Array(analyser.frequencyBinCount);
             analyser.getFloatTimeDomainData(rawAudioData);
-
+            
             let wasUpdated = false;
             // Process each sample for pitch detection
             let frequencyDetected = false;
@@ -404,7 +392,7 @@ async function initAudio() {
                 frequency = 0;
             }
 
-            console.log(`${pitchDetector.getFrequency().toFixed(2)} ${pitchDetector.getPeriodicity().toFixed(2)}`);
+            // console.log(`${pitchDetector.getFrequency().toFixed(2)} ${pitchDetector.getPeriodicity().toFixed(2)}`);
             // console.log("Final frequency:", frequency);
             // console.log("Samples:", input.length);
             // updatePlots(frequency, rawAudioData);
@@ -415,7 +403,7 @@ async function initAudio() {
         //     const { frequency, rawAudioBuffer } = event.data;
         //     updatePlots(frequency, rawAudioBuffer);
         // };
-
+        
     } catch (error) {
         console.error('Error setting up audio:', error);
     }
@@ -448,3 +436,18 @@ function logToHz(value) {
 function hzToLog(hz) {
     return Math.log10(hz);
 }
+
+// Set up frequency range value display with logarithmic conversion
+document.getElementById('minFreq').addEventListener('input', function() {
+    const hzValue = logToHz(this.value);
+    document.getElementById('minFreqValue').textContent = hzValue;
+});
+
+document.getElementById('maxFreq').addEventListener('input', function() {
+    const hzValue = logToHz(this.value);
+    document.getElementById('maxFreqValue').textContent = hzValue;
+});
+
+// Initialize the frequency values
+document.getElementById('minFreqValue').textContent = logToHz(document.getElementById('minFreq').value);
+document.getElementById('maxFreqValue').textContent = logToHz(document.getElementById('maxFreq').value);
