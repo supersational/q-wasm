@@ -196,10 +196,19 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 const A4_FREQ = 440.0;
 const A4_NOTE = 69; // MIDI note number for A4
 
+// Piano keyboard constants
+const PIANO_LOWEST_NOTE = 21; // A0 in MIDI
+const PIANO_HIGHEST_NOTE = 108; // C8 in MIDI
+let lastHighlightedKey = null;
+
 initPlots();
 
+// Initialize piano keyboard
+const pianoCanvas = document.getElementById('pianoCanvas');
+DrawKeyboard(pianoCanvas);
+
 function frequencyToNote(frequency) {
-    if (!frequency) return { note: '--', cents: 0 };
+    if (!frequency) return { note: '--', cents: 0, midiNote: null };
     
     // Calculate MIDI note number
     const noteNum = 12 * (Math.log2(frequency / A4_FREQ)) + A4_NOTE;
@@ -214,7 +223,8 @@ function frequencyToNote(frequency) {
     
     return {
         note: `${noteName}${octave}`,
-        cents: cents
+        cents: cents,
+        midiNote: roundedNote
     };
 }
 
@@ -255,11 +265,17 @@ function updatePlots(frequency, rawAudioBuffer) {
         const noteInfo = frequencyToNote(lastValidPitch);
         noteDisplay.textContent = `Note: ${noteInfo.note}`;
         centsDisplay.textContent = `${Math.abs(noteInfo.cents)}${noteInfo.cents < 0 ? '♭' : '♯'}`;
+        
+        // Update piano keyboard visualization
+        updatePianoKeyboard(noteInfo.midiNote);
     } else {
         freqDisplay.textContent = 'Frequency: -- Hz';
         periodDisplay.textContent = 'Periodicity: --';
         noteDisplay.textContent = 'Note: --';
         centsDisplay.textContent = 'Cents: --';
+        
+        // Clear piano keyboard highlight when no note is detected
+        updatePianoKeyboard(null);
     }
 
     // Update pitch data array
@@ -451,3 +467,29 @@ document.getElementById('maxFreq').addEventListener('input', function() {
 // Initialize the frequency values
 document.getElementById('minFreqValue').textContent = logToHz(document.getElementById('minFreq').value);
 document.getElementById('maxFreqValue').textContent = logToHz(document.getElementById('maxFreq').value);
+
+// Function to update the piano keyboard visualization
+function updatePianoKeyboard(midiNote) {
+    console.log("updatePianoKeyboard() called with midiNote:", midiNote);
+    // Convert MIDI note to piano key index (0-87, where 0 is A0 and 87 is C8)
+    let pianoKeyIndex = null;
+    
+    if (midiNote !== null) {
+        // Only highlight notes within the piano range
+        if (midiNote >= PIANO_LOWEST_NOTE && midiNote <= PIANO_HIGHEST_NOTE) {
+            pianoKeyIndex = midiNote - PIANO_LOWEST_NOTE;
+        }
+    }
+    
+    // Only redraw if the highlighted key has changed
+    if (pianoKeyIndex !== lastHighlightedKey) {
+        lastHighlightedKey = pianoKeyIndex;
+        
+        // Clear previous highlighting and draw new one
+        const redKeys = pianoKeyIndex !== null ? [pianoKeyIndex] : [];
+        console.log("Red keys:", redKeys);
+        DrawKeyboard(pianoCanvas, redKeys);
+    }
+}
+
+console.log("new")

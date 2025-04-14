@@ -210,6 +210,12 @@
                 <div id="periodicity">Periodicity: --</div>
             </div>
         </div>
+        <div class="container">
+            <h2>Piano Keyboard Visualization</h2>
+            <div class="piano-container" style="display: flex; justify-content: center; margin: 20px 0;">
+                <canvas id="pianoCanvas" width="650" height="72"></canvas>
+            </div>
+        </div>
 
         <div class="plot-container">
             <div id="pitchPlot"></div>
@@ -222,7 +228,9 @@
         <div class="plot-container">
             <div id="waveformPlot"></div>
         </div>
+        
     </div>
+    <script src="pianokeyboard.js"></script>
     <script src="pitch_detector.js" type="module"></script>
 </body>
 </html>
